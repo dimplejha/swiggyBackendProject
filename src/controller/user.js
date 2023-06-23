@@ -7,12 +7,28 @@ const postData = async (req, res) => {
   const validationError = validateInputs(req);
   if (validationError) {
     return res.status(400).send({
-      msg: `Invalid ${validationError.field}`,
+      msg: validationError.message,
       field: validationError.field,
     });
   }
 
   try {
+    const emailExists = await userModel.findOne({ email: req.body.email });
+    if (emailExists) {
+      return res.status(400).send({
+        msg: 'Email is already in use',
+        field: 'email',
+      });
+    }
+
+    const mobileExists = await userModel.findOne({ mobile: req.body.mobile });
+    if (mobileExists) {
+      return res.status(400).send({
+        msg: 'mobile is already in use',
+        field: 'mobile',
+      });
+    }
+
     const data = await userModel.create(req.body);
     return res.status(201).send({ msg: 'User created successfully', data });
   } catch (error) {
