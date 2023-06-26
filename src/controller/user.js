@@ -1,5 +1,6 @@
 const userModel = require('../model/userModel');
 const { validateInputs } = require('../middleware/validator');
+const bcrypt = require('bcrypt');
 
 const postData = async (req, res) => {
   console.log(req.body);
@@ -20,6 +21,7 @@ const postData = async (req, res) => {
         field: 'email',
       });
     }
+    const hashedPasword = await bcrypt.hash(req.body.password, 10);
 
     const mobileExists = await userModel.findOne({ mobile: req.body.mobile });
     if (mobileExists) {
@@ -29,10 +31,43 @@ const postData = async (req, res) => {
       });
     }
 
-    const data = await userModel.create(req.body);
+    // const data = await userModel.create(req.body);
+    const data = await userModel.create({
+      ...req.body,
+      password: hashedPasword,
+    });
+
     return res.status(201).send({ msg: 'User created successfully', data });
   } catch (error) {
+    console.log(error);
     return res.status(500).send({ msg: 'Failed to create user', error });
+  }
+};
+
+const loginUser = async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const emailExists = await userModel.findOne({ email: req.body.email });
+    if (!emailExists) {
+      return res.status(400).send({
+        msg: 'singup first',
+        field: 'mobile',
+      });
+    }
+
+    const hashedPassword = bcrypt.compareSync(password, emailExists.password);
+    if (!hashedPassword) {
+      return res.status(400).send({
+        msg: 'Invalid password',
+        field: 'password',
+      });
+    }
+    return res
+      .status(200)
+      .send({ message: 'login successfully', data: emailExists });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ msg: 'Failed to login user', error });
   }
 };
 
@@ -68,6 +103,7 @@ const getPerticularData = async (req, res) => {
 
 module.exports = {
   postData,
+  loginUser,
   getData,
   updateData,
   deleteData,
